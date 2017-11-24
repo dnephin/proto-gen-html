@@ -17,6 +17,7 @@ import (
 	"github.com/gengo/grpc-gateway/protoc-gen-grpc-gateway/httprule"
 	descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"sourcegraph.com/sourcegraph/prototools/util"
+	"gopkg.in/russross/blackfriday.v2"
 )
 
 // unixPath takes a path, cleans it, and replaces any windows separators (\\)
@@ -142,6 +143,10 @@ func (f *tmplFuncs) funcMap() template.FuncMap {
 		},
 		"AllEnums": func(fixNames bool) []*descriptor.EnumDescriptorProto {
 			return util.AllEnums(f.f, fixNames)
+		},
+		"markdown": func(source string) template.HTML {
+			output := blackfriday.Run([]byte(source))
+			return template.HTML(output)
 		},
 	}
 }

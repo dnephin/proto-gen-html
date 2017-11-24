@@ -32,7 +32,7 @@ func appendElem(symbolPath, childName string) string {
 	return fmt.Sprintf("%s.%s", symbolPath, childName)
 }
 
-// AllMessages returnes a list of all the message type nodes in f, including
+// AllMessages returns a list of all the message type nodes in f, including
 // nested ones.
 func AllMessages(f *descriptor.FileDescriptorProto, swapNames bool) []*descriptor.DescriptorProto {
 	var (

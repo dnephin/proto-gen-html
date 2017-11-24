@@ -27,13 +27,25 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/shurcooL/sanitized_anchor_name"
+  packages = ["."]
+  revision = "86672fcb3f950f35f2e675df2240550f2a50762f"
+
+[[projects]]
+  branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/api/annotations"]
   revision = "7f0da29060c682909f650ad8ed4e515bd74fa12a"
 
+[[projects]]
+  name = "gopkg.in/russross/blackfriday.v2"
+  packages = ["."]
+  revision = "cadec560ec52d93835bf2f15bd794700d3a2473b"
+  version = "v2.0.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "66b28971783e4548bd21be888030f8f732955816f7c80f6341b9251cb43cd69e"
+  inputs-digest = "21e28cdb9c70fffcc49144c5d75052ec54f37955b5715f8382d2cb867616a7e8"
   solver-name = "gps-cdcl"
   solver-version = 1
