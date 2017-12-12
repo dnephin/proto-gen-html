@@ -29,7 +29,7 @@ job=watch:
   use: builder
   mounts: [source]
   interactive: true
-  command: scripts/watch
+  command: filewatcher -x 'vendor' go test -v './${dir}'
 
 job=test-unit:
   use: builder

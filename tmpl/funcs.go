@@ -11,25 +11,11 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"unicode"
 
-	gateway "github.com/gengo/grpc-gateway/protoc-gen-grpc-gateway/descriptor"
-	"github.com/gengo/grpc-gateway/protoc-gen-grpc-gateway/httprule"
 	descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
-	"sourcegraph.com/sourcegraph/prototools/util"
 	"gopkg.in/russross/blackfriday.v2"
+	"sourcegraph.com/sourcegraph/prototools/util"
 )
-
-// unixPath takes a path, cleans it, and replaces any windows separators (\\)
-// with unix ones (/). This is needed because plugin.CodeGeneratorResponse_File
-// is defined as having always unix path separators for the file name.
-func unixPath(s string) string {
-	s = filepath.Clean(s)
-	s = strings.Replace(s, "\\", "/", -1)
-
-	// Duplicate clean for trailing slashes that were previously windows ones.
-	return filepath.Clean(s)
-}
 
 // stripExt strips the extension off the path and returns it.
 func stripExt(s string) string {
@@ -38,16 +24,6 @@ func stripExt(s string) string {
 		return s[:len(s)-len(ext)]
 	}
 	return s
-}
-
-// slug returns a simple slug string by making everything lowercase and
-// replacing anything no a unicode letter with a dash separator.
-func slug(s string) string {
-	s = strings.ToLower(s)
-	fields := strings.FieldsFunc(s, func(c rune) bool {
-		return !unicode.IsLetter(c)
-	})
-	return strings.Join(fields, "-")
 }
 
 // comments takes a string of comments that contain newlines, it merges all
@@ -94,8 +70,6 @@ func comments(c string) []string {
 	return segments
 }
 
-var Preload = (&tmplFuncs{}).funcMap()
-
 // cacheItem is a single cache item with a value and a location -- effectively
 // it is just used for searching.
 type cacheItem struct {
@@ -107,13 +81,10 @@ type cacheItem struct {
 // the FuncMap above for these to be called properly (as they are actually
 // closures with context).
 type tmplFuncs struct {
-	f                   *descriptor.FileDescriptorProto
+	protoFileDescriptor *descriptor.FileDescriptorProto
 	outputFile, rootDir string
 	protoFile           []*descriptor.FileDescriptorProto
-	registry            *gateway.Registry
-	apiHost             string
-
-	locCache []cacheItem
+	locCache            []cacheItem
 }
 
 // funcMap returns the function map for feeding into templates.
@@ -123,26 +94,17 @@ func (f *tmplFuncs) funcMap() template.FuncMap {
 		"cleanType":  f.cleanType,
 		"fieldType":  f.fieldType,
 		"dict":       f.dict,
-		"ext":        filepath.Ext,
-		"dir": func(s string) string {
-			dir, _ := path.Split(s)
-			return dir
-		},
-		"trimExt":       stripExt,
-		"slug":          slug,
-		"comments":      comments,
-		"sub":           f.sub,
-		"filepath":      f.filepath,
-		"gatewayMethod": f.gatewayMethod,
-		"gatewayPath":   f.gatewayPath,
-		"urlToType":     f.urlToType,
-		"jsonMessage":   f.jsonMessage,
-		"location":      f.location,
+		"trimExt":    stripExt,
+		"comments":   comments,
+		"sub":        f.sub,
+		"filepath":   f.filepath,
+		"urlToType":  f.urlToType,
+		"location":   f.location,
 		"AllMessages": func(fixNames bool) []*descriptor.DescriptorProto {
-			return util.AllMessages(f.f, fixNames)
+			return util.AllMessages(f.protoFileDescriptor, fixNames)
 		},
 		"AllEnums": func(fixNames bool) []*descriptor.EnumDescriptorProto {
-			return util.AllEnums(f.f, fixNames)
+			return util.AllEnums(f.protoFileDescriptor, fixNames)
 		},
 		"markdown": func(source string) template.HTML {
 			output := blackfriday.Run([]byte(source))
@@ -203,44 +165,6 @@ func (f *tmplFuncs) filepath() string {
 	return path.Join(f.rootDir, f.outputFile)
 }
 
-// gatewayMethod returns the grpc-gateway method for a given service method.
-func (f *tmplFuncs) gatewayMethod(target *descriptor.MethodDescriptorProto) (*gateway.Method, error) {
-	file, err := f.registry.LookupFile(f.f.GetName())
-	if err != nil {
-		return nil, err
-	}
-	for _, s := range file.Services {
-		for _, m := range s.Methods {
-			if m.MethodDescriptorProto == target {
-				return m, nil
-			}
-		}
-	}
-	return nil, nil
-}
-
-// gatewayPath renders the given grpc-gateway HTTP rule template (i.e. the HTTP
-// route to be bound). The method parameter is used to insert a link to the
-// method type for any HTTP fields (which will be marked clearly in "{text}").
-//
-// The returned string will always be prefixed by the APIHost string.
-func (f *tmplFuncs) gatewayPath(r *httprule.Template, method *descriptor.MethodDescriptorProto) template.HTML {
-	var final string
-pool:
-	for _, pathElem := range r.Pool {
-		for _, fieldName := range r.Fields {
-			if pathElem != fieldName {
-				continue
-			}
-			u := fmt.Sprintf(`<a href="%s">{%s}</a>`, f.urlToType(method.GetInputType()), pathElem)
-			final = path.Join(final, u)
-			continue pool
-		}
-		final = path.Join(final, pathElem)
-	}
-	return template.HTML(f.apiHost + final)
-}
-
 // urlToType returns a URL to the documentation file for the given type. The
 // input type path can be either fully-qualified or not, regardless, the URL
 // returned will always have a fully-qualified hash.
@@ -283,12 +207,12 @@ func (f *tmplFuncs) urlToType(symbolPath string) string {
 // ourselves.
 func (f *tmplFuncs) resolvePkgPath(pkg string) string {
 	// Test this proto file itself:
-	if stripExt(filepath.Base(*f.f.Name)) == pkg {
-		return *f.f.Name
+	if stripExt(filepath.Base(*f.protoFileDescriptor.Name)) == pkg {
+		return *f.protoFileDescriptor.Name
 	}
 
 	// Test each dependency:
-	for _, p := range f.f.Dependency {
+	for _, p := range f.protoFileDescriptor.Dependency {
 		if stripExt(filepath.Base(p)) == pkg {
 			return p
 		}
@@ -309,7 +233,7 @@ func (f *tmplFuncs) location(x interface{}) *descriptor.SourceCodeInfo_Location 
 
 	// If the location cache is empty; we build it now.
 	if f.locCache == nil {
-		for _, loc := range f.f.SourceCodeInfo.Location {
+		for _, loc := range f.protoFileDescriptor.SourceCodeInfo.Location {
 			f.locCache = append(f.locCache, cacheItem{
 				V: f.walkPath(loc.Path),
 				L: loc,
@@ -329,11 +253,11 @@ func (f *tmplFuncs) findCachedItem(x interface{}) *descriptor.SourceCodeInfo_Loc
 	return nil
 }
 
-// walkPath walks through the root node (the f.f file) descending down the path
+// walkPath walks through the root node (the protoFileDescriptor.protoFileDescriptor file) descending down the path
 // until it is resolved, at which point the value is returned.
 func (f *tmplFuncs) walkPath(path []int32) interface{} {
 	if len(path) == 0 {
-		return f.f
+		return f.protoFileDescriptor
 	}
 	var (
 		walker func(id int, v interface{}) bool
@@ -354,7 +278,7 @@ func (f *tmplFuncs) walkPath(path []int32) interface{} {
 		f.protoFields(reflect.ValueOf(v), walker)
 		return false
 	}
-	f.protoFields(reflect.ValueOf(f.f), walker)
+	f.protoFields(reflect.ValueOf(f.protoFileDescriptor), walker)
 	return found
 }
 

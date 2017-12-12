@@ -26,6 +26,12 @@
   version = "v1.3.0"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/shurcooL/sanitized_anchor_name"
   packages = ["."]
@@ -46,6 +52,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "21e28cdb9c70fffcc49144c5d75052ec54f37955b5715f8382d2cb867616a7e8"
+  inputs-digest = "e2440bcb457715da6adccbaddcab780f2c84bfc77b76f83d4cd4dd4e7c88ee1c"
   solver-name = "gps-cdcl"
   solver-version = 1
