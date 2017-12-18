@@ -1,5 +1,5 @@
 meta:
-  project: proto-doc
+  project: proto-gen-html
 
 mount=source:
   bind: .
@@ -10,12 +10,12 @@ mount=depsources:
  path: /go/pkg/dep/sources
 
 image=builder:
-  image: proto-doc-dev
+  image: proto-gen-html-dev
   context: dobifiles/
   dockerfile: Dockerfile
 
 image=linter:
-  image: proto-doc-lint
+  image: proto-gen-html-lint
   context: dobifiles/
   dockerfile: Dockerfile.lint
 

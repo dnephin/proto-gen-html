@@ -12,12 +12,12 @@ import (
 	"strings"
 
 	"github.com/dnephin/proto-gen-html/util"
-	descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"gopkg.in/russross/blackfriday.v2"
 )
 
-// stripExt strips the extension off the path and returns it.
-func stripExt(s string) string {
+// trimExt strips the extension off the path and returns it.
+func trimExt(s string) string {
 	ext := filepath.Ext(s)
 	if len(ext) > 0 {
 		return s[:len(s)-len(ext)]
@@ -93,7 +93,7 @@ func (f *tmplFuncs) funcMap() template.FuncMap {
 		"cleanLabel": f.cleanLabel,
 		"cleanType":  f.cleanType,
 		"fieldType":  f.fieldType,
-		"trimExt":    stripExt,
+		"trimExt":    trimExt,
 		"comments":   comments,
 		"sub":        f.sub,
 		"urlToType":  f.urlToType,
@@ -173,7 +173,7 @@ func (f *tmplFuncs) urlToType(symbolPath string) string {
 
 	// Prefix the absolute path with the root directory and swap the extension out
 	// with the correct one.
-	p := stripExt(pkgPath) + path.Ext(f.outputFile)
+	p := trimExt(pkgPath) + path.Ext(f.outputFile)
 	p = path.Join(f.urlRoot, p)
 	return fmt.Sprintf("%s#%s", p, typePath)
 }

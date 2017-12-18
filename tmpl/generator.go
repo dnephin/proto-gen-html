@@ -8,15 +8,14 @@ import (
 
 	gateway "github.com/gengo/grpc-gateway/protoc-gen-grpc-gateway/descriptor"
 	"github.com/golang/protobuf/proto"
-	descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/pkg/errors"
 )
 
 type generator struct {
-	config   Config
-	request  *plugin.CodeGeneratorRequest
-	registry *gateway.Registry // TODO: remove, not used
+	config  Config
+	request *plugin.CodeGeneratorRequest
 }
 
 // New returns a new generator for the given template.
@@ -31,13 +30,16 @@ func Generate(request *plugin.CodeGeneratorRequest, config Config) (*plugin.Code
 		return nil, errors.Wrapf(err, "failed to load request")
 	}
 
-	g := &generator{request: request, registry: registry, config: config}
+	g := &generator{request: request, config: config}
 	return g.Generate(), nil
 }
 
 func (g *generator) Generate() *plugin.CodeGeneratorResponse {
-	response := &plugin.CodeGeneratorResponse{}
+	if len(g.config.Operations) == 0 {
+		g.config.Operations = defaultOperations(g.request)
+	}
 
+	response := &plugin.CodeGeneratorResponse{}
 	errs := new(bytes.Buffer)
 	for _, opConfig := range g.config.Operations {
 		f, err := g.genTarget(opConfig)
@@ -55,9 +57,27 @@ func (g *generator) Generate() *plugin.CodeGeneratorResponse {
 	return response
 }
 
+func defaultOperations(request *plugin.CodeGeneratorRequest) []OperationConfig {
+	ops := []OperationConfig{
+		{
+			Template: "index.fragment.html",
+			Output:   "index.fragment.html",
+		},
+	}
+	for _, protoFile := range request.ProtoFile {
+		op := OperationConfig{
+			Template: "template.html",
+			Target:   *protoFile.Name,
+			Output:   fmt.Sprintf("%s.html", trimExt(*protoFile.Name)),
+		}
+		ops = append(ops, op)
+	}
+	return ops
+}
+
 type templateContext struct {
-	*descriptor.FileDescriptorProto
-	Request *plugin.CodeGeneratorRequest
+	*plugin.CodeGeneratorRequest
+	TargetProtoFile *descriptor.FileDescriptorProto
 }
 
 func (g *generator) genTarget(opConfig OperationConfig) (*plugin.CodeGeneratorResponse_File, error) {
@@ -79,8 +99,8 @@ func (g *generator) genTarget(opConfig OperationConfig) (*plugin.CodeGeneratorRe
 		protoFiles:          g.request.GetProtoFile(),
 	}
 	ctx := templateContext{
-		FileDescriptorProto: protoFile,
-		Request:             g.request,
+		CodeGeneratorRequest: g.request,
+		TargetProtoFile:      protoFile,
 	}
 	err = tmpl.Funcs(funcs.funcMap()).Execute(buf, ctx)
 	if err != nil {

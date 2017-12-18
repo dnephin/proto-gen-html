@@ -9,7 +9,7 @@ func TestStripExt(t *testing.T) {
 		"long.extension": "long",
 	}
 	for f, correct := range files {
-		got := stripExt(f)
+		got := trimExt(f)
 		if got != correct {
 			t.Fatalf("got %q expected %q", got, correct)
 		}
