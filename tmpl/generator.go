@@ -77,7 +77,7 @@ func defaultOperations(request *plugin.CodeGeneratorRequest) []OperationConfig {
 
 type templateContext struct {
 	*plugin.CodeGeneratorRequest
-	TargetProtoFile *descriptor.FileDescriptorProto
+	Target *descriptor.FileDescriptorProto
 }
 
 func (g *generator) genTarget(opConfig OperationConfig) (*plugin.CodeGeneratorResponse_File, error) {
@@ -100,7 +100,7 @@ func (g *generator) genTarget(opConfig OperationConfig) (*plugin.CodeGeneratorRe
 	}
 	ctx := templateContext{
 		CodeGeneratorRequest: g.request,
-		TargetProtoFile:      protoFile,
+		Target:               protoFile,
 	}
 	err = tmpl.Funcs(funcs.funcMap()).Execute(buf, ctx)
 	if err != nil {
@@ -124,5 +124,9 @@ func getProtoFileFromTarget(target string, request *plugin.CodeGeneratorRequest)
 
 func (g *generator) loadTemplate(opConfig OperationConfig) (*template.Template, error) {
 	fullPath := filepath.Join(g.config.TemplateRoot, opConfig.Template)
-	return template.New("main").ParseFiles(fullPath)
+	tmpl, err := template.New("main").Funcs(newDefaultTemplateFuncs()).ParseFiles(fullPath)
+	if err != nil {
+		return nil, err
+	}
+	return tmpl.Lookup(filepath.Base(fullPath)), nil
 }

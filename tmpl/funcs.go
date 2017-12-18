@@ -87,6 +87,10 @@ type tmplFuncs struct {
 	locCache            []cacheItem
 }
 
+func newDefaultTemplateFuncs() template.FuncMap {
+	return (&tmplFuncs{}).funcMap()
+}
+
 // funcMap returns the function map for feeding into templates.
 func (f *tmplFuncs) funcMap() template.FuncMap {
 	return map[string]interface{}{
