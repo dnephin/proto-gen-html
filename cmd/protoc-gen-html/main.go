@@ -7,10 +7,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/dnephin/proto-gen-html/tmpl"
 	"github.com/golang/protobuf/proto"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/pkg/errors"
-	"sourcegraph.com/sourcegraph/prototools/tmpl"
 )
 
 func main() {

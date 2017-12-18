@@ -3,7 +3,7 @@ meta:
 
 mount=source:
   bind: .
-  path: /go/src/sourcegraph.com/sourcegraph/prototools
+  path: /go/src/github.com/dnephin/proto-gen-html
 
 mount=depsources:
  bind: ./.depsources

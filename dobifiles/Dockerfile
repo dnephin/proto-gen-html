@@ -16,5 +16,5 @@ RUN     go get -d github.com/golang/dep/cmd/dep && \
         go build -v -o /usr/bin/dep ./cmd/dep && \
         rm -rf /go/src/* /go/pkg/* /go/bin/*
 
-WORKDIR /go/src/sourcegraph.com/sourcegraph/prototools
+WORKDIR /go/src/github.com/dnephin/proto-gen-html
 ENV     CGO_ENABLED=0

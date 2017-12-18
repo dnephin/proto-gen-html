@@ -1,4 +1,4 @@
-package tmpl // import "sourcegraph.com/sourcegraph/prototools/tmpl"
+package tmpl
 
 import (
 	"bytes"

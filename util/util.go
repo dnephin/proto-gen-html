@@ -1,5 +1,4 @@
-// Package util implements utilities for building protoc compiler plugins.
-package util // import "sourcegraph.com/sourcegraph/prototools/util"
+package util
 
 import (
 	"encoding/json"

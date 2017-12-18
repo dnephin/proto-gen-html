@@ -8,7 +8,7 @@ import (
 
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/pkg/errors"
-	"sourcegraph.com/sourcegraph/prototools/tmpl"
+	"github.com/dnephin/proto-gen-html/tmpl"
 )
 
 func loadConfig(request *plugin.CodeGeneratorRequest) (tmpl.Config, error) {

@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dnephin/proto-gen-html/util"
 	descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"gopkg.in/russross/blackfriday.v2"
-	"sourcegraph.com/sourcegraph/prototools/util"
 )
 
 // stripExt strips the extension off the path and returns it.
