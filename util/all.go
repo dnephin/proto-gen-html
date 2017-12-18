@@ -34,7 +34,7 @@ func appendElem(symbolPath, childName string) string {
 
 // AllMessages returns a list of all the message type nodes in f, including
 // nested ones.
-func AllMessages(f *descriptor.FileDescriptorProto, swapNames bool) []*descriptor.DescriptorProto {
+func AllMessages(f *descriptor.FileDescriptorProto) []*descriptor.DescriptorProto {
 	var (
 		all        []*descriptor.DescriptorProto
 		walk       func(n *descriptor.DescriptorProto)
@@ -50,11 +50,7 @@ func AllMessages(f *descriptor.FileDescriptorProto, swapNames bool) []*descripto
 
 		for _, child := range n.NestedType {
 			// Accumulate the node and swap the names of it, if desired.
-			if swapNames {
-				all = append(all, nameMessage(child, symbolPath+child.GetName()))
-			} else {
-				all = append(all, child)
-			}
+			all = append(all, nameMessage(child, symbolPath+child.GetName()))
 
 			symbolPath = appendElem(symbolPath, child.GetName()) // push parent type name
 			walk(child)                                          // walk nested types, recursively
@@ -75,7 +71,7 @@ func AllMessages(f *descriptor.FileDescriptorProto, swapNames bool) []*descripto
 
 // AllEnums returnes a list of all the enum type nodes in f, including nested
 // ones.
-func AllEnums(f *descriptor.FileDescriptorProto, swapNames bool) []*descriptor.EnumDescriptorProto {
+func AllEnums(f *descriptor.FileDescriptorProto) []*descriptor.EnumDescriptorProto {
 	var (
 		all        []*descriptor.EnumDescriptorProto
 		walk       func(n *descriptor.DescriptorProto)
@@ -91,10 +87,7 @@ func AllEnums(f *descriptor.FileDescriptorProto, swapNames bool) []*descriptor.E
 
 		for _, child := range n.EnumType {
 			// Accumulate the node, swapping the names of it if desired.
-			if swapNames {
-				child = nameEnum(child, symbolPath+child.GetName())
-			}
-			all = append(all, child)
+			all = append(all, nameEnum(child, symbolPath+child.GetName()))
 		}
 
 		// Walk the nested types for this message node, in case there are more child

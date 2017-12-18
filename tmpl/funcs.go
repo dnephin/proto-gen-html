@@ -1,8 +1,6 @@
 package tmpl
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"html/template"
 	"path"
@@ -23,50 +21,6 @@ func trimExt(s string) string {
 		return s[:len(s)-len(ext)]
 	}
 	return s
-}
-
-// comments takes a string of comments that contain newlines, it merges all
-// newlines together except doubles (i.e. blank lines), and then returns
-// segments:
-//
-//   we like to\n
-//   keep width\n
-//   below 10\n
-//   \n
-//   but sometimes we go over\n
-//   \t   \n
-//   crazy, right?\n
-//
-// And returns it in segments of blank newlines:
-//
-//   "we like to keep width below 10"
-//   "but sometimes we go over"
-//   "crazy, right?"
-//
-func comments(c string) []string {
-	var (
-		scanner  = bufio.NewScanner(bytes.NewBufferString(c))
-		segments []string
-		s        []byte
-	)
-	for scanner.Scan() {
-		text := scanner.Text()
-		if len(s) > 0 && len(strings.TrimSpace(text)) == 0 {
-			// Blank line, we begin a new segment.
-			segments = append(segments, string(s))
-			s = s[:0]
-			continue
-		}
-		if len(s) > 0 {
-			s = append(s, ' ')
-		}
-		s = append(s, []byte(text)...)
-	}
-	// Handle the final segment if there is one.
-	if len(s) > 0 {
-		segments = append(segments, string(s))
-	}
-	return segments
 }
 
 // cacheItem is a single cache item with a value and a location -- effectively
@@ -94,30 +48,26 @@ func newDefaultTemplateFuncs() template.FuncMap {
 // funcMap returns the function map for feeding into templates.
 func (f *tmplFuncs) funcMap() template.FuncMap {
 	return map[string]interface{}{
-		"cleanLabel": f.cleanLabel,
-		"cleanType":  f.cleanType,
-		"fieldType":  f.fieldType,
-		"trimExt":    trimExt,
-		"comments":   comments,
-		"sub":        f.sub,
-		"urlToType":  f.urlToType,
-		"location":   f.location,
-		"AllMessages": func(fixNames bool) []*descriptor.DescriptorProto {
-			return util.AllMessages(f.protoFileDescriptor, fixNames)
-		},
-		"AllEnums": func(fixNames bool) []*descriptor.EnumDescriptorProto {
-			return util.AllEnums(f.protoFileDescriptor, fixNames)
-		},
+		"labelString":  labelString,
+		"typeBaseName": typeBaseName,
+		"fieldType":    fieldType,
+		"trimExt":      trimExt,
+		"typeURL":      f.typeURL,
+		"location":     f.location,
+		"allMessages":  util.AllMessages,
+		"allEnums":     util.AllEnums,
 		"markdown": func(source string) template.HTML {
-			output := blackfriday.Run([]byte(source))
-			return template.HTML(output)
+			return template.HTML(blackfriday.Run([]byte(source)))
+		},
+		"lastProtoFile": func() *descriptor.FileDescriptorProto {
+			return f.protoFiles[len(f.protoFiles)-1]
 		},
 	}
 }
 
-// cleanLabel returns the clean (i.e. human-readable / protobuf-style) version
+// labelString returns the clean (i.e. human-readable / protobuf-style) version
 // of a label.
-func (f *tmplFuncs) cleanLabel(l *descriptor.FieldDescriptorProto_Label) string {
+func labelString(l *descriptor.FieldDescriptorProto_Label) string {
 	switch int32(*l) {
 	case 1:
 		return "optional"
@@ -130,38 +80,30 @@ func (f *tmplFuncs) cleanLabel(l *descriptor.FieldDescriptorProto_Label) string 
 	}
 }
 
-// cleanType returns the last part of a types name, i.e. for a fully-qualified
+// typeBaseName returns the last part of a types name, i.e. for a fully-qualified
 // type ".foo.bar.baz" it would return just "baz".
-func (f *tmplFuncs) cleanType(path string) string {
+func typeBaseName(path string) string {
 	split := strings.Split(path, ".")
 	return split[len(split)-1]
 }
 
 // fieldType returns the clean (i.e. human-readable / protobuf-style) version
 // of a field type.
-func (f *tmplFuncs) fieldType(field *descriptor.FieldDescriptorProto) string {
+func fieldType(field *descriptor.FieldDescriptorProto) string {
 	if field.TypeName != nil {
-		return f.cleanType(*field.TypeName)
+		return typeBaseName(*field.TypeName)
 	}
 	return util.FieldTypeName(field.Type)
 }
 
-// sub performs simple x-y subtraction on integers.
-func (f *tmplFuncs) sub(x, y int) int { return x - y }
-
-// urlToType returns a URL to the documentation file for the given type. The
+// typeURL returns a URL to the documentation file for the given type. The
 // input type path can be either fully-qualified or not, regardless, the URL
 // returned will always have a fully-qualified hash.
 //
 // TODO(slimsag): have the template pass in the relative type instead of nil,
 // so that relative symbol paths work.
-func (f *tmplFuncs) urlToType(symbolPath string) string {
-	if !util.IsFullyQualified(symbolPath) {
-		panic("urlToType: not a fully-qualified symbol path")
-	}
-
-	// Resolve the package path for the type.
-	file := util.NewResolver(f.protoFiles).ResolveFile(symbolPath, nil)
+func (f *tmplFuncs) typeURL(symbolPath string) string {
+	_, file := util.NewResolver(f.protoFiles).Resolve(symbolPath, nil)
 	if file == nil {
 		return ""
 	}

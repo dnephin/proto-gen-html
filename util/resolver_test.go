@@ -17,8 +17,8 @@ func TestResolverFQ(t *testing.T) {
 	}
 	resolver := NewResolver(req.ProtoFile)
 	for symbolPath, want := range tests {
-		got := resolver.ResolveFile(symbolPath, nil).GetName()
-		if got != want {
+		_, got := resolver.Resolve(symbolPath, nil)
+		if got.GetName() != want {
 			t.Logf("symbolPath=%q\n", symbolPath)
 			t.Fatalf("got %q want %q", got, want)
 		}

@@ -104,26 +104,6 @@ type Resolver struct {
 	f []*descriptor.FileDescriptorProto
 }
 
-// ResolveFile resolves the file that the given symbol is declared inside of, or
-// nil if it is not. It is short-handed for:
-//
-//  _, file := r.Resolve(symbolPath)
-//
-func (r *Resolver) ResolveFile(symbolPath string, relative ASTNode) *descriptor.FileDescriptorProto {
-	_, file := r.Resolve(symbolPath, relative)
-	return file
-}
-
-// ResolveSymbol resolves the symbol with the given path, or nil of it cannot be
-// resolved. It is short-handed for:
-//
-//  node, _ := r.Resolve(symbolPath)
-//
-func (r *Resolver) ResolveSymbol(symbolPath string, relative ASTNode) ASTNode {
-	node, _ := r.Resolve(symbolPath, relative)
-	return node
-}
-
 // Resolve resolves the named symbol into its actual AST node and the file that
 // node is inside of. Example symbolPath strings are:
 //
@@ -170,7 +150,7 @@ func (r *Resolver) ResolveSymbol(symbolPath string, relative ASTNode) ASTNode {
 // TODO(slimsag): relative symbol path resolution is not yet implemented and as
 // such will always panic.
 func (r *Resolver) Resolve(symbolPath string, relative ASTNode) (ASTNode, *descriptor.FileDescriptorProto) {
-	if !IsFullyQualified(symbolPath) {
+	if !isFullyQualified(symbolPath) {
 		panic("resolution of relative (non-fully-qualified) symbol paths is not implemented")
 	}
 	symbolPath = strings.TrimPrefix(symbolPath, ".")
@@ -207,6 +187,12 @@ func (r *Resolver) Resolve(symbolPath string, relative ASTNode) (ASTNode, *descr
 		}
 	}
 	return nil, nil
+}
+
+// isFullyQualified tells if the given symbol path is fully-qualified or not (i.e.
+// starts with a period).
+func isFullyQualified(symbolPath string) bool {
+	return symbolPath[0] == '.'
 }
 
 // NewResolver returns a new symbol resolver for the given files.

@@ -34,6 +34,10 @@ func loadConfig(request *plugin.CodeGeneratorRequest) (tmpl.Config, error) {
 		config.URLRoot = value
 	}
 
+	if value, ok := params["template_root"]; ok {
+		config.TemplateRoot = value
+	}
+
 	if config.TemplateRoot == "" {
 		var err error
 		config.TemplateRoot, err = os.Getwd()

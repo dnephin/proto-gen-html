@@ -55,12 +55,6 @@ func FieldTypeName(f *descriptor.FieldDescriptorProto_Type) string {
 	}
 }
 
-// IsFullyQualified tells if the given symbol path is fully-qualified or not (i.e.
-// starts with a period).
-func IsFullyQualified(symbolPath string) bool {
-	return symbolPath[0] == '.'
-}
-
 // TrimElem returns the given symbol path with at max N elements trimmed off the
 // left (outermost) side.
 //

@@ -15,7 +15,7 @@ func TestIsFullyQualified(t *testing.T) {
 		"UninterpretedOption":                  false,
 	}
 	for symbolPath, want := range tests {
-		got := IsFullyQualified(symbolPath)
+		got := isFullyQualified(symbolPath)
 		if got != want {
 			t.Fatalf("got %v want %v", got, want)
 		}
