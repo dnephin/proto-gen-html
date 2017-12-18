@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/dnephin/proto-gen-html/tmpl"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/pkg/errors"
-	"github.com/dnephin/proto-gen-html/tmpl"
 )
 
 func loadConfig(request *plugin.CodeGeneratorRequest) (tmpl.Config, error) {
@@ -23,15 +24,19 @@ func loadConfig(request *plugin.CodeGeneratorRequest) (tmpl.Config, error) {
 		if err := json.Unmarshal(confData, &config); err != nil {
 			return config, errors.Wrapf(err, "failed to unmarshal config %s", conf)
 		}
+
+		if config.TemplateRoot == "" {
+			config.TemplateRoot = filepath.Dir(conf)
+		}
 	}
 
-	if value, ok := params["root"]; ok {
-		config.Root = value
+	if value, ok := params["url_root"]; ok {
+		config.URLRoot = value
 	}
 
-	if config.Root == "" {
+	if config.TemplateRoot == "" {
 		var err error
-		config.Root, err = os.Getwd()
+		config.TemplateRoot, err = os.Getwd()
 		if err != nil {
 			return config, err
 		}

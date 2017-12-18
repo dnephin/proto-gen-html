@@ -16,6 +16,7 @@ type OperationConfig struct {
 
 // Config for the plugin
 type Config struct {
-	Root       string
-	Operations []OperationConfig
+	TemplateRoot string
+	URLRoot      string
+	Operations   []OperationConfig
 }

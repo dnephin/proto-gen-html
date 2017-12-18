@@ -75,8 +75,8 @@ func (g *generator) genTarget(opConfig OperationConfig) (*plugin.CodeGeneratorRe
 	funcs := &tmplFuncs{
 		protoFileDescriptor: protoFile,
 		outputFile:          opConfig.Output,
-		rootDir:             g.config.Root,
-		protoFile:           g.request.GetProtoFile(),
+		urlRoot:             g.config.URLRoot,
+		protoFiles:          g.request.GetProtoFile(),
 	}
 	ctx := templateContext{
 		FileDescriptorProto: protoFile,
@@ -103,9 +103,6 @@ func getProtoFileFromTarget(target string, request *plugin.CodeGeneratorRequest)
 }
 
 func (g *generator) loadTemplate(opConfig OperationConfig) (*template.Template, error) {
-	fullPath, err := filepath.Rel(g.config.Root, opConfig.Template)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to make path relative")
-	}
+	fullPath := filepath.Join(g.config.TemplateRoot, opConfig.Template)
 	return template.New("main").ParseFiles(fullPath)
 }

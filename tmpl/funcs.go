@@ -3,7 +3,6 @@ package tmpl
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"html/template"
 	"path"
@@ -82,8 +81,9 @@ type cacheItem struct {
 // closures with context).
 type tmplFuncs struct {
 	protoFileDescriptor *descriptor.FileDescriptorProto
-	outputFile, rootDir string
-	protoFile           []*descriptor.FileDescriptorProto
+	outputFile          string
+	urlRoot             string
+	protoFiles          []*descriptor.FileDescriptorProto
 	locCache            []cacheItem
 }
 
@@ -93,11 +93,9 @@ func (f *tmplFuncs) funcMap() template.FuncMap {
 		"cleanLabel": f.cleanLabel,
 		"cleanType":  f.cleanType,
 		"fieldType":  f.fieldType,
-		"dict":       f.dict,
 		"trimExt":    stripExt,
 		"comments":   comments,
 		"sub":        f.sub,
-		"filepath":   f.filepath,
 		"urlToType":  f.urlToType,
 		"location":   f.location,
 		"AllMessages": func(fixNames bool) []*descriptor.DescriptorProto {
@@ -144,26 +142,8 @@ func (f *tmplFuncs) fieldType(field *descriptor.FieldDescriptorProto) string {
 	return util.FieldTypeName(field.Type)
 }
 
-// dict builds a map of paired items, allowing you to invoke a template with
-// multiple parameters.
-func (f *tmplFuncs) dict(pairs ...interface{}) (map[string]interface{}, error) {
-	if len(pairs)%2 != 0 {
-		return nil, errors.New("expected pairs")
-	}
-	m := make(map[string]interface{}, len(pairs)/2)
-	for i := 0; i < len(pairs); i += 2 {
-		m[pairs[i].(string)] = pairs[i+1]
-	}
-	return m, nil
-}
-
 // sub performs simple x-y subtraction on integers.
 func (f *tmplFuncs) sub(x, y int) int { return x - y }
-
-// filepath returns the output filepath (prefixed by the root directory).
-func (f *tmplFuncs) filepath() string {
-	return path.Join(f.rootDir, f.outputFile)
-}
 
 // urlToType returns a URL to the documentation file for the given type. The
 // input type path can be either fully-qualified or not, regardless, the URL
@@ -177,7 +157,7 @@ func (f *tmplFuncs) urlToType(symbolPath string) string {
 	}
 
 	// Resolve the package path for the type.
-	file := util.NewResolver(f.protoFile).ResolveFile(symbolPath, nil)
+	file := util.NewResolver(f.protoFiles).ResolveFile(symbolPath, nil)
 	if file == nil {
 		return ""
 	}
@@ -194,30 +174,8 @@ func (f *tmplFuncs) urlToType(symbolPath string) string {
 	// Prefix the absolute path with the root directory and swap the extension out
 	// with the correct one.
 	p := stripExt(pkgPath) + path.Ext(f.outputFile)
-	p = path.Join(f.rootDir, p)
+	p = path.Join(f.urlRoot, p)
 	return fmt.Sprintf("%s#%s", p, typePath)
-}
-
-// resolvePkgPath resolves the named protobuf package, returning its file path.
-//
-// TODO(slimsag): This function assumes that the package ("package foo;") is
-// named identically to its file name ("foo.proto"). Protoc doesn't pass such
-// information to us because it hasn't parsed all the files yet -- we will most
-// likely have to scan for the package statement in these dependency files
-// ourselves.
-func (f *tmplFuncs) resolvePkgPath(pkg string) string {
-	// Test this proto file itself:
-	if stripExt(filepath.Base(*f.protoFileDescriptor.Name)) == pkg {
-		return *f.protoFileDescriptor.Name
-	}
-
-	// Test each dependency:
-	for _, p := range f.protoFileDescriptor.Dependency {
-		if stripExt(filepath.Base(p)) == pkg {
-			return p
-		}
-	}
-	return ""
 }
 
 // location returns the source code info location for the generic AST-like node
@@ -235,7 +193,7 @@ func (f *tmplFuncs) location(x interface{}) *descriptor.SourceCodeInfo_Location 
 	if f.locCache == nil {
 		for _, loc := range f.protoFileDescriptor.SourceCodeInfo.Location {
 			f.locCache = append(f.locCache, cacheItem{
-				V: f.walkPath(loc.Path),
+				V: walkPath(loc.Path, f.protoFileDescriptor),
 				L: loc,
 			})
 		}
@@ -255,9 +213,9 @@ func (f *tmplFuncs) findCachedItem(x interface{}) *descriptor.SourceCodeInfo_Loc
 
 // walkPath walks through the root node (the protoFileDescriptor.protoFileDescriptor file) descending down the path
 // until it is resolved, at which point the value is returned.
-func (f *tmplFuncs) walkPath(path []int32) interface{} {
+func walkPath(path []int32, protoFileDescriptor *descriptor.FileDescriptorProto) interface{} {
 	if len(path) == 0 {
-		return f.protoFileDescriptor
+		return protoFileDescriptor
 	}
 	var (
 		walker func(id int, v interface{}) bool
@@ -275,16 +233,16 @@ func (f *tmplFuncs) walkPath(path []int32) interface{} {
 		}
 		target = int(path[0])
 		path = path[1:]
-		f.protoFields(reflect.ValueOf(v), walker)
+		protoFields(reflect.ValueOf(v), walker)
 		return false
 	}
-	f.protoFields(reflect.ValueOf(f.protoFileDescriptor), walker)
+	protoFields(reflect.ValueOf(protoFileDescriptor), walker)
 	return found
 }
 
 // protoFields invokes fn with the protobuf tag ID and its in-memory Go value
 // given a descriptor node type. It stops invoking fn when it returns false.
-func (f *tmplFuncs) protoFields(node reflect.Value, fn func(id int, v interface{}) bool) {
+func protoFields(node reflect.Value, fn func(id int, v interface{}) bool) {
 	indirect := reflect.Indirect(node)
 
 	switch indirect.Kind() {
